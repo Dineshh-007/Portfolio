@@ -27,10 +27,6 @@ class PDFService:
     def _generate_pdf_sync(self) -> Optional[str]:
         """Synchronous PDF generation"""
         try:
-            from weasyprint import HTML, CSS
-            from weasyprint.css import get_all_computed_styles
-            from weasyprint.css.targets import get_page_box
-            
             html_content = self._get_resume_html()
             
             # Create temporary files
@@ -42,22 +38,25 @@ class PDFService:
             with open(temp_html, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            # Generate PDF using WeasyPrint
-            html_doc = HTML(filename=temp_html)
-            html_doc.write_pdf(temp_pdf)
-            
-            # Clean up HTML file
+            # Try to import and use WeasyPrint
             try:
-                os.remove(temp_html)
-            except:
-                pass
-            
-            logger.info(f"PDF resume generated: {temp_pdf}")
-            return temp_pdf
-            
-        except ImportError:
-            logger.warning("WeasyPrint not available, falling back to HTML")
-            return self._generate_html_fallback()
+                from weasyprint import HTML
+                html_doc = HTML(filename=temp_html)
+                html_doc.write_pdf(temp_pdf)
+                
+                # Clean up HTML file
+                try:
+                    os.remove(temp_html)
+                except:
+                    pass
+                
+                logger.info(f"PDF resume generated successfully: {temp_pdf}")
+                return temp_pdf
+                
+            except ImportError as e:
+                logger.warning(f"WeasyPrint not available: {e}, falling back to HTML")
+                return temp_html
+                
         except Exception as e:
             logger.error(f"Error in PDF generation: {e}")
             return self._generate_html_fallback()
