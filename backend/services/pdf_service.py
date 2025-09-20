@@ -4,6 +4,7 @@ import os
 import tempfile
 import logging
 from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -14,25 +15,67 @@ class PDFService:
     async def generate_resume_pdf(self) -> Optional[str]:
         """Generate PDF resume and return file path"""
         try:
-            # For now, create a simple HTML-to-PDF conversion
-            # In production, you might use puppeteer, weasyprint, or similar
+            # Run the PDF generation in a thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            pdf_path = await loop.run_in_executor(None, self._generate_pdf_sync)
+            return pdf_path
+            
+        except Exception as e:
+            logger.error(f"Error generating PDF resume: {e}")
+            return None
+    
+    def _generate_pdf_sync(self) -> Optional[str]:
+        """Synchronous PDF generation"""
+        try:
+            from weasyprint import HTML, CSS
+            from weasyprint.css import get_all_computed_styles
+            from weasyprint.css.targets import get_page_box
             
             html_content = self._get_resume_html()
             
-            # Create temporary HTML file
-            temp_html = os.path.join(self.temp_dir, f"resume_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html")
-            temp_pdf = temp_html.replace('.html', '.pdf')
+            # Create temporary files
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            temp_html = os.path.join(self.temp_dir, f"resume_{timestamp}.html")
+            temp_pdf = os.path.join(self.temp_dir, f"resume_{timestamp}.pdf")
+            
+            # Write HTML content
+            with open(temp_html, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            # Generate PDF using WeasyPrint
+            html_doc = HTML(filename=temp_html)
+            html_doc.write_pdf(temp_pdf)
+            
+            # Clean up HTML file
+            try:
+                os.remove(temp_html)
+            except:
+                pass
+            
+            logger.info(f"PDF resume generated: {temp_pdf}")
+            return temp_pdf
+            
+        except ImportError:
+            logger.warning("WeasyPrint not available, falling back to HTML")
+            return self._generate_html_fallback()
+        except Exception as e:
+            logger.error(f"Error in PDF generation: {e}")
+            return self._generate_html_fallback()
+    
+    def _generate_html_fallback(self) -> Optional[str]:
+        """Generate HTML fallback if PDF generation fails"""
+        try:
+            html_content = self._get_resume_html()
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            temp_html = os.path.join(self.temp_dir, f"resume_{timestamp}.html")
             
             with open(temp_html, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            # For demo purposes, return HTML file path
-            # In production, convert HTML to PDF using appropriate library
-            logger.info(f"Resume generated: {temp_html}")
+            logger.info(f"HTML resume generated: {temp_html}")
             return temp_html
-            
         except Exception as e:
-            logger.error(f"Error generating PDF resume: {e}")
+            logger.error(f"Error generating HTML fallback: {e}")
             return None
     
     def _get_resume_html(self) -> str:
