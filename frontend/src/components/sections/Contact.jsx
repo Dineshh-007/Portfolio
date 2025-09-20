@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Mail, Github, Linkedin, Download } from 'lucide-react';
-import { toast } from "../ui/use-toast";
+import { toast } from "../../hooks/use-toast";
 
 const Contact = ({ id, userData }) => {
   const [formData, setFormData] = useState({
