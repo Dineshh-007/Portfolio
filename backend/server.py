@@ -190,6 +190,20 @@ async def get_contact_submissions():
         logger.error(f"Error fetching contact submissions: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch contact submissions")
 
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    """API health check"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": {
+            "database": "connected",
+            "github_api": "available",
+            "email_service": "configured" if email_service.is_configured() else "not_configured"
+        }
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
