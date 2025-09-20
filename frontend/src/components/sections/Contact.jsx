@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { Send, Mail, Github, Linkedin, Download } from 'lucide-react';
+import { Send, Mail, Github, Linkedin, Download, Loader } from 'lucide-react';
 import { toast } from "../../hooks/use-toast";
+import { portfolioAPI } from '../../services/api';
+import { userData } from '../../data/mock';
 
-const Contact = ({ id, userData }) => {
+const Contact = ({ id }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -21,23 +24,49 @@ const Contact = ({ id, userData }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Mock form submission - will be replaced with actual backend integration
-    setTimeout(() => {
+    try {
+      const response = await portfolioAPI.submitContactForm(formData);
+      
+      if (response.success) {
+        toast({
+          title: "Message sent successfully!",
+          description: response.message || "Thank you for reaching out. I'll get back to you soon.",
+        });
+        setFormData({ name: '', email: '', message: '' });
+      } else {
+        throw new Error(response.message || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
       toast({
-        title: "Message sent successfully!",
-        description: "Thank you for reaching out. I'll get back to you soon.",
+        title: "Failed to send message",
+        description: "Please try again later or contact me directly via email.",
+        variant: "destructive"
       });
-      setFormData({ name: '', email: '', message: '' });
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
-  const handleDownloadResume = () => {
-    // Mock resume download - will be replaced with actual PDF generation
-    toast({
-      title: "Resume download started",
-      description: "Your download will begin shortly.",
-    });
+  const handleDownloadResume = async () => {
+    setIsDownloading(true);
+    
+    try {
+      await portfolioAPI.downloadResume();
+      toast({
+        title: "Resume download started",
+        description: "Your download should begin shortly.",
+      });
+    } catch (error) {
+      console.error('Resume download error:', error);
+      toast({
+        title: "Download failed",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -76,7 +105,8 @@ const Contact = ({ id, userData }) => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300 disabled:opacity-50"
                   placeholder="Enter your name"
                 />
               </div>
@@ -92,7 +122,8 @@ const Contact = ({ id, userData }) => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300 disabled:opacity-50"
                   placeholder="Enter your email"
                 />
               </div>
@@ -108,7 +139,8 @@ const Contact = ({ id, userData }) => {
                   value={formData.message}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300 resize-none"
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-[#E6EAF2] placeholder-[#ADB5C2] focus:outline-none focus:ring-2 focus:ring-[#22D3EE] focus:border-transparent transition-all duration-300 resize-none disabled:opacity-50"
                   placeholder="Your message..."
                 />
               </div>
@@ -116,11 +148,11 @@ const Contact = ({ id, userData }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-[#7C3AED] to-[#22D3EE] text-white px-8 py-4 rounded-xl font-medium hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-[#7C3AED] to-[#22D3EE] text-white px-8 py-4 rounded-xl font-medium hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <Loader className="w-5 h-5 animate-spin" />
                     Sending...
                   </>
                 ) : (
@@ -190,10 +222,20 @@ const Contact = ({ id, userData }) => {
 
               <button
                 onClick={handleDownloadResume}
-                className="w-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white px-6 py-4 rounded-xl font-medium hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
+                disabled={isDownloading}
+                className="w-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white px-6 py-4 rounded-xl font-medium hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
-                <Download size={16} />
-                Download Resume
+                {isDownloading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Download Resume
+                  </>
+                )}
               </button>
             </div>
           </div>
