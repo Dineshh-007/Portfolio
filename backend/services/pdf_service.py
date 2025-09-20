@@ -203,8 +203,8 @@ class PDFService:
             </div>
 
             <div style="margin-top: 50px; text-align: center; font-size: 0.9em; color: #6b7280;">
-                <p>Generated from portfolio website • {datetime.now().strftime('%B %Y')}</p>
+                <p>Generated from portfolio website • """ + datetime.now().strftime('%B %Y') + """</p>
             </div>
         </body>
         </html>
-        """.format(datetime=datetime)
+        """
