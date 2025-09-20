@@ -98,11 +98,29 @@ async def download_resume():
         resume_path = await pdf_service.generate_resume_pdf()
         
         if resume_path and os.path.exists(resume_path):
-            return FileResponse(
-                path=resume_path,
-                filename="Dinesh_E_Resume.html",  # In production, this would be .pdf
-                media_type="text/html"  # In production, this would be application/pdf
-            )
+            file_extension = os.path.splitext(resume_path)[1].lower()
+            
+            if file_extension == '.pdf':
+                return FileResponse(
+                    path=resume_path,
+                    filename="Dinesh_E_Resume.pdf",
+                    media_type="application/pdf",
+                    headers={
+                        "Content-Disposition": "attachment; filename=Dinesh_E_Resume.pdf",
+                        "Cache-Control": "no-cache"
+                    }
+                )
+            else:
+                # HTML fallback
+                return FileResponse(
+                    path=resume_path,
+                    filename="Dinesh_E_Resume.html",
+                    media_type="text/html",
+                    headers={
+                        "Content-Disposition": "attachment; filename=Dinesh_E_Resume.html",
+                        "Cache-Control": "no-cache"
+                    }
+                )
         else:
             raise HTTPException(status_code=500, detail="Failed to generate resume")
             
