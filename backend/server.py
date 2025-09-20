@@ -208,10 +208,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
 # Health check endpoint
 @api_router.get("/health")
 async def health_check():
@@ -225,3 +221,7 @@ async def health_check():
             "email_service": "configured" if email_service.is_configured() else "not_configured"
         }
     }
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
